@@ -86,8 +86,8 @@ class LinePlot(HasTraits):
         self.plot.range2d.y_range.low = ymin - np.abs(0.1*ymin)
         self.plot.range2d.y_range.high = ymax + np.abs(0.1*ymax)
 
-if __name__ == "__main__":
 
+def threaded_update():
     def update_loop(line_plot):
         time.sleep(5.0)  # wait for UI to load
         iter_idx = 0
@@ -107,3 +107,29 @@ if __name__ == "__main__":
     thd.daemon = True
     thd.start()
     plot.configure_traits()
+
+
+def timed_update():
+    from pyface.timer.api import Timer
+
+    def update_loop(line_plot):
+        line_plot.update_data()
+        # shouldn't need this
+        # line_plot.autoscale_axis()
+
+    def log_memory():
+        # log memory usage
+        usage = float(psutil.Process(os.getpid()).memory_info().rss)*1e-6
+        info = '#[{}] MB:{:f}'.format(-1, usage)
+        logger.warning(info)
+
+    plot = LinePlot()
+    millisecs = int(1000.0/30.0)  # ~30Hz
+    update_timer = Timer(millisecs, update_loop, plot)
+    log_timer = Timer(int(1000.0*10.0), log_memory)
+    update_timer.Start()
+    log_timer.Start()
+    plot.configure_traits()
+
+if __name__ == "__main__":
+    timed_update()
